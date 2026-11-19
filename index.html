@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#fffaf0">
+    <title>설정 · 옷 고르기</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#home">옷 고르기<span aria-hidden="true">.</span></a>
+      <nav aria-label="주요 메뉴">
+        <a href="#home">홈</a>
+        <a href="#add">기록 추가</a>
+        <a href="#settings" aria-current="page">설정</a>
+      </nav>
+    </header>
+    <main>
+      <p class="preview-note">화면 미리보기 · 저장과 날씨 조회는 준비 중이에요.</p>
+
+      <section id="home" class="screen" aria-labelledby="home-title" hidden>
+        <p class="eyebrow">내 경험으로 고르는 옷</p>
+        <h1 id="home-title" tabindex="-1">오늘 뭐 입지?</h1>
+        <p class="intro">비슷한 날 입었던 옷과 느낌을 보고<br>오늘의 아우터를 골라요.</p>
+        <div class="weather-card">
+          <p>오늘 외출 시간대</p>
+          <div class="temperature">—<span>°C</span></div>
+          <p class="weather-caption">체감온도와 비·눈 정보가 여기에 표시돼요.</p>
+          <a href="#settings">지역과 외출 시간 설정</a>
+        </div>
+        <button class="primary-button" type="button" disabled>옷 고르기</button>
+        <div class="section-heading">
+          <h2>비슷한 날의 내 기록</h2>
+          <a href="#add">기록 추가</a>
+        </div>
+        <div class="empty-state">
+          <p>오늘의 경험이<br>다음 선택을 도와줄 거예요.</p>
+          <a class="secondary-button" href="#add">오늘 입은 옷 기록하기</a>
+        </div>
+      </section>
+
+      <section id="add" class="screen" aria-labelledby="add-title" hidden>
+        <p class="eyebrow">내 옷의 기록</p>
+        <h1 id="add-title" tabindex="-1">오늘 입은 옷</h1>
+        <p class="intro">어떤 옷을 입었고, 어떻게 느꼈나요?</p>
+        <div class="form-card">
+          <p class="field-note">날짜와 체감온도는 기록 기능이 연결되면 표시돼요.</p>
+          <label for="outer">아우터</label>
+          <input id="outer" type="text" placeholder="예: 울 코트" autocomplete="off">
+          <label for="inner">이너 메모 <span class="optional">선택 · 20자 이내</span></label>
+          <input id="inner" type="text" maxlength="20" placeholder="예: 니트, 히트텍" autocomplete="off">
+          <fieldset>
+            <legend>오늘 어땠나요?</legend>
+            <div class="ratings">
+              <label class="rating cold"><input type="radio" name="rating" value="cold"><span>추웠음</span></label>
+              <label class="rating comfortable"><input type="radio" name="rating" value="ok"><span>적당</span></label>
+              <label class="rating hot"><input type="radio" name="rating" value="hot"><span>더웠음</span></label>
+            </div>
+          </fieldset>
+          <button class="primary-button" type="button" disabled>기록 저장 · 준비 중</button>
+        </div>
+        <a class="back-link" href="#home">홈으로 돌아가기</a>
+      </section>
+
+      <section id="settings" class="screen" aria-labelledby="settings-title">
+        <p class="eyebrow">내 하루에 맞게</p>
+        <h1 id="settings-title" tabindex="-1">어디로 나가세요?</h1>
+        <p class="intro">지역과 외출 시간을 기준으로<br>내게 맞는 날씨를 살펴볼게요.</p>
+        <div class="form-card">
+          <fieldset>
+            <legend>내 지역</legend>
+            <div class="region-fields">
+              <div><label class="small-label" for="city">시·도</label><select id="city" disabled><option>지역 목록 준비 중</option></select></div>
+              <div><label class="small-label" for="district">시·구</label><select id="district" disabled><option>시·구 선택</option></select></div>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>외출 시간대</legend>
+            <div class="time-fields">
+              <div><label class="small-label" for="out-start">시작</label><input id="out-start" type="time" value="08:00"></div>
+              <span aria-hidden="true">–</span>
+              <div><label class="small-label" for="out-end">종료</label><input id="out-end" type="time" value="19:00"></div>
+            </div>
+          </fieldset>
+          <p class="privacy-note">기록은 이 기기의 브라우저에만 저장돼요.<br>브라우저 데이터를 지우면 기록도 사라질 수 있어요.</p>
+          <button class="primary-button" type="button" disabled>설정 저장 · 준비 중</button>
+        </div>
+        <a class="back-link" href="#home">홈 화면 둘러보기</a>
+      </section>
+      <noscript><p>화면을 이동하려면 브라우저에서 JavaScript를 켜 주세요.</p></noscript>
+    </main>
+  </body>
+</html>
