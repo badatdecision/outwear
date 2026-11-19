@@ -12,9 +12,17 @@
   const error = document.getElementById("settings-error");
   const notice = document.getElementById("save-notice");
   const retryButton = document.getElementById("retry-regions");
+  const recordForm = document.getElementById("record-form");
+  const recordError = document.getElementById("weather-error");
+  const manualTemperature = document.getElementById("manual-temperature");
+  const outerInput = document.getElementById("outer");
+  const outerOptions = document.getElementById("outer-options");
   const storage = window.OutwearStorage;
+  const weather = window.OutwearWeather;
   let regions = [];
   let settings = null;
+  let currentWeather = null;
+  let recordWeather = null;
 
   function showError(message) {
     error.textContent = message;
@@ -35,6 +43,138 @@
     document.getElementById("settings-summary").textContent = settings
       ? settings.region + " · " + settings.outStart + "–" + settings.outEnd
       : "오늘 외출 시간대";
+  }
+
+  function renderRecords() {
+    const list = document.getElementById("record-list");
+    const records = storage.loadData().records;
+    list.replaceChildren();
+    document.getElementById("record-empty").hidden = records.length > 0;
+    const ratings = { cold: "추웠음", ok: "적당", hot: "더웠음" };
+    for (const record of [...records].reverse()) {
+      const card = document.createElement("article");
+      card.className = "record-item";
+      const outer = document.createElement("strong");
+      outer.textContent = record.outer;
+      const detail = document.createElement("span");
+      detail.textContent = record.date + " · 체감 " + temperatureText(record.feelsLike)
+        + " · " + (ratings[record.rating] || "평가") + (record.inner ? " · " + record.inner : "")
+        + (record.manualTemp ? " · 직접 입력" : "");
+      card.append(outer, detail);
+      list.append(card);
+    }
+  }
+
+  function temperatureText(value) {
+    return (value > 0 ? "+" : "") + value.toFixed(1) + "°C";
+  }
+
+  function precipitationText(value) {
+    return value === "rain" ? "비" : value === "snow" ? "눈" : "강수 없음";
+  }
+
+  function renderWeather(target, result) {
+    const dayLabel = result.date === weather.localDate(new Date()) ? "오늘" : "내일 기준";
+    target.textContent = dayLabel + " · 체감 " + temperatureText(result.feelsLike)
+      + " · 기온 " + temperatureText(result.temp) + " · " + precipitationText(result.precip);
+  }
+
+  async function fetchWeather() {
+    const caption = document.getElementById("weather-caption");
+    const retry = document.getElementById("load-weather");
+    if (!settings) {
+      caption.textContent = "지역과 외출 시간을 먼저 설정해 주세요.";
+      return;
+    }
+    caption.textContent = "날씨를 불러오는 중이에요.";
+    retry.hidden = true;
+    try {
+      currentWeather = await weather.getWeather(settings);
+      renderWeather(caption, currentWeather);
+    } catch {
+      currentWeather = null;
+      caption.textContent = "날씨를 불러오지 못했어요. 기록할 때 온도를 직접 입력할 수 있어요.";
+      retry.hidden = false;
+    }
+  }
+
+  function renderOuterOptions() {
+    outerOptions.replaceChildren();
+    for (const name of storage.loadData().outers) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "outer-option";
+      button.textContent = name;
+      button.setAttribute("aria-pressed", String(outerInput.value === name));
+      button.addEventListener("click", () => {
+        outerInput.value = name;
+        for (const option of outerOptions.children) {
+          option.setAttribute("aria-pressed", String(option === button));
+        }
+      });
+      outerOptions.append(button);
+    }
+  }
+
+  async function prepareRecord() {
+    recordError.hidden = true;
+    manualTemperature.hidden = true;
+    recordWeather = null;
+    document.getElementById("record-weather").textContent = "오늘 외출 시간대 날씨를 불러오는 중이에요.";
+    renderOuterOptions();
+    try {
+      if (!settings) throw new Error("설정 화면에서 지역과 외출 시간을 먼저 저장해 주세요.");
+      recordWeather = await weather.getWeather(settings);
+      renderWeather(document.getElementById("record-weather"), recordWeather);
+    } catch (error) {
+      recordError.textContent = (error.message || "날씨를 불러오지 못했어요.")
+        + " 온도와 아우터, 평가를 입력해 기록할 수 있어요.";
+      recordError.hidden = false;
+      manualTemperature.hidden = false;
+      document.getElementById("record-weather").textContent = "날씨 조회에 실패했어요.";
+    }
+  }
+
+  function saveRecord(event) {
+    event.preventDefault();
+    recordError.hidden = true;
+    const outer = outerInput.value.trim();
+    const rating = recordForm.querySelector('input[name="rating"]:checked')?.value;
+    if (!outer || !rating) {
+      recordError.textContent = "아우터를 입력하고 오늘의 느낌을 선택해 주세요.";
+      recordError.hidden = false;
+      return;
+    }
+    let conditions = recordWeather;
+    if (!conditions) {
+      const feelsLike = Number(document.getElementById("manual-feels-like").value);
+      const temp = Number(document.getElementById("manual-temperature-value").value);
+      if (!document.getElementById("manual-feels-like").value
+        || !document.getElementById("manual-temperature-value").value
+        || !Number.isFinite(feelsLike) || !Number.isFinite(temp) || feelsLike < -50 || feelsLike > 60 || temp < -50 || temp > 60) {
+        recordError.textContent = "체감온도와 기온을 -50°C에서 60°C 사이로 입력해 주세요.";
+        recordError.hidden = false;
+        return;
+      }
+      conditions = { date: weather.localDate(new Date()), feelsLike, temp, precip: "none", manualTemp: true };
+    }
+    const record = {
+      id: window.crypto.randomUUID(), date: conditions.date, outer,
+      inner: document.getElementById("inner").value.trim(), rating,
+      feelsLike: conditions.feelsLike, temp: conditions.temp,
+      precip: conditions.precip, manualTemp: conditions.manualTemp,
+    };
+    try {
+      storage.saveRecord(record);
+    } catch {
+      recordError.textContent = "기록을 저장하지 못했어요. 브라우저 저장 공간을 확인해 주세요.";
+      recordError.hidden = false;
+      return;
+    }
+    recordForm.reset();
+    notice.textContent = "오늘 입은 옷을 기록했어요.";
+    notice.hidden = false;
+    window.location.hash = "home";
   }
 
   function fillDistricts() {
@@ -156,6 +296,11 @@
 
     const heading = activeScreen.querySelector("h1");
     document.title = heading.textContent + " · 옷 고르기";
+    if (activeScreen.id === "home") {
+      renderRecords();
+      fetchWeather();
+    }
+    if (activeScreen.id === "add") prepareRecord();
     if (moveFocus) {
       heading.focus({ preventScroll: true });
       window.scrollTo(0, 0);
@@ -169,6 +314,9 @@
   form.addEventListener("submit", saveSettings);
   form.addEventListener("input", () => { notice.hidden = true; });
   retryButton.addEventListener("click", loadRegions);
+  document.getElementById("load-weather").addEventListener("click", fetchWeather);
+  outerInput.addEventListener("input", renderOuterOptions);
+  recordForm.addEventListener("submit", saveRecord);
   window.addEventListener("storage", (event) => {
     if (event.key !== storage.key && event.key !== null) return;
     readSettings();

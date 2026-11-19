@@ -37,5 +37,29 @@ window.OutwearStorage = (() => {
     window.localStorage.setItem(key, JSON.stringify(data));
   }
 
-  return Object.freeze({ key, loadSettings, saveSettings, validSettings });
+  function loadData() {
+    const data = read();
+    return {
+      ...data,
+      settings: validSettings(data.settings) ? data.settings : null,
+      outers: Array.isArray(data.outers) ? data.outers.filter((name) => typeof name === "string") : [],
+      records: Array.isArray(data.records) ? data.records : [],
+    };
+  }
+
+  function saveRecord(record) {
+    if (!record || !record.outer || !["cold", "ok", "hot"].includes(record.rating)
+      || !Number.isFinite(record.feelsLike) || !Number.isFinite(record.temp)
+      || !["none", "rain", "snow"].includes(record.precip)) {
+      throw new Error("기록 내용을 확인해 주세요.");
+    }
+    const data = read();
+    data.outers = Array.isArray(data.outers) ? data.outers : [];
+    data.records = Array.isArray(data.records) ? data.records : [];
+    if (!data.outers.includes(record.outer)) data.outers.push(record.outer);
+    data.records.push(record);
+    window.localStorage.setItem(key, JSON.stringify(data));
+  }
+
+  return Object.freeze({ key, loadSettings, loadData, saveSettings, saveRecord, validSettings });
 })();
