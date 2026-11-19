@@ -76,6 +76,9 @@ select:disabled { opacity: 1; background-color: #f5f4ee; color: #636960; }
 .outer-option { min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; color: #1a3a3a; background: #fff; cursor: pointer; }
 .outer-option[aria-pressed="true"] { border-color: #1a3a3a; background: #d7e8de; }
 .record-list { display: grid; gap: 10px; margin-top: 12px; }
+.recommendations { margin-top: 24px; padding: 20px; border: 1px solid var(--line); border-radius: 20px; background: #fff; }
+.recommendations > p { color: var(--muted); line-height: 1.7; }
+.record-condition { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; background: #d7e8de; color: #1a3a3a; font-size: 12px; }
 .record-item { padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
 .record-item strong { display: block; font-size: 16px; }
 .record-item span { display: block; margin-top: 5px; color: var(--muted); font-size: 14px; }

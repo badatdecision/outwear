@@ -601,6 +601,7 @@
     </script>
     <script src="storage.js" defer></script>
     <script src="weather.js" defer></script>
+    <script src="rules.js" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body>
@@ -627,7 +628,13 @@
           <a href="#settings">지역과 외출 시간 설정</a>
         </div>
         <button id="load-weather" class="secondary-button" type="button" hidden>날씨 다시 불러오기</button>
-        <button class="primary-button" type="button" disabled>옷 고르기</button>
+        <button id="choose-outfit" class="primary-button" type="button">옷 고르기</button>
+        <section id="recommendations" class="recommendations" aria-live="polite" hidden>
+          <h2 id="recommendation-title">비슷한 날의 내 기록 (±3°C)</h2>
+          <p id="recommendation-message"></p>
+          <div id="recommendation-list" class="record-list"></div>
+          <a id="recommendation-add" class="secondary-button" href="#add" hidden>오늘 입은 옷 기록하기</a>
+        </section>
         <div class="section-heading">
           <h2>내 옷 기록</h2>
           <a href="#add">기록 추가</a>

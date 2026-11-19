@@ -19,6 +19,7 @@
   const outerOptions = document.getElementById("outer-options");
   const storage = window.OutwearStorage;
   const weather = window.OutwearWeather;
+  const rules = window.OutwearRules;
   let regions = [];
   let settings = null;
   let currentWeather = null;
@@ -77,6 +78,62 @@
     const dayLabel = result.date === weather.localDate(new Date()) ? "오늘" : "내일 기준";
     target.textContent = dayLabel + " · 체감 " + temperatureText(result.feelsLike)
       + " · 기온 " + temperatureText(result.temp) + " · " + precipitationText(result.precip);
+  }
+
+  function renderRecommendations(result) {
+    const panel = document.getElementById("recommendations");
+    const message = document.getElementById("recommendation-message");
+    const list = document.getElementById("recommendation-list");
+    const addLink = document.getElementById("recommendation-add");
+    const records = rules.recommend(storage.loadData().records, result.feelsLike, result.precip);
+    panel.hidden = false;
+    list.replaceChildren();
+    addLink.hidden = records.length > 0;
+
+    if (!records.length) {
+      document.getElementById("recommendation-title").textContent = "기본 가이드";
+      message.textContent = "비슷한 온도의 기록이 아직 없어요. " + rules.basicGuide(result.feelsLike);
+      return;
+    }
+
+    document.getElementById("recommendation-title").textContent = "비슷한 날의 내 기록 (±3°C)";
+    message.textContent = "적당했던 옷을 먼저 보여드려요.";
+    const ratings = { ok: "적당", cold: "추웠음", hot: "더웠음" };
+    for (const record of records) {
+      const card = document.createElement("article");
+      card.className = "record-item";
+      const outer = document.createElement("strong");
+      outer.textContent = record.outer;
+      const detail = document.createElement("span");
+      detail.textContent = record.date + " · 체감 " + temperatureText(record.feelsLike)
+        + " · " + ratings[record.rating] + (record.inner ? " · " + record.inner : "");
+      card.append(outer, detail);
+      if (result.precip !== "none" && record.precip === result.precip) {
+        const condition = document.createElement("span");
+        condition.className = "record-condition";
+        condition.textContent = precipitationText(record.precip) + " 온 날";
+        outer.append(condition);
+      }
+      list.append(card);
+    }
+  }
+
+  async function chooseOutfit() {
+    const panel = document.getElementById("recommendations");
+    const message = document.getElementById("recommendation-message");
+    panel.hidden = false;
+    message.textContent = "날씨를 확인하고 있어요.";
+    if (!currentWeather) {
+      try {
+        if (!settings) throw new Error("설정 화면에서 지역과 외출 시간을 먼저 저장해 주세요.");
+        currentWeather = await weather.getWeather(settings);
+        renderWeather(document.getElementById("weather-caption"), currentWeather);
+      } catch {
+        message.textContent = "날씨를 확인하지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.";
+        return;
+      }
+    }
+    renderRecommendations(currentWeather);
   }
 
   async function fetchWeather() {
@@ -315,6 +372,7 @@
   form.addEventListener("input", () => { notice.hidden = true; });
   retryButton.addEventListener("click", loadRegions);
   document.getElementById("load-weather").addEventListener("click", fetchWeather);
+  document.getElementById("choose-outfit").addEventListener("click", chooseOutfit);
   outerInput.addEventListener("input", renderOuterOptions);
   recordForm.addEventListener("submit", saveRecord);
   window.addEventListener("storage", (event) => {
