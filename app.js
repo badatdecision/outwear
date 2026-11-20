@@ -18,7 +18,6 @@
   const manualTemperature = document.getElementById("manual-temperature");
   const outerTypesContainer = document.getElementById("outer-types");
   const outerNickname = document.getElementById("outer-nickname");
-  const outerOptions = document.getElementById("outer-options");
   const storage = window.OutwearStorage;
   const weather = window.OutwearWeather;
   const rules = window.OutwearRules;
@@ -27,22 +26,34 @@
   let currentWeather = null;
   let recordWeather = null;
   let selectedOuterType = "";
+  let saveNoticeTimer = null;
   const outerTypes = [
-    { name: "패딩", paths: ["M23 9 17 13 10 29l9 4 4-6v27h18V27l4 6 9-4-7-16-7-4-7 4h-6z", "M23 23h18", "M23 32h18", "M23 41h18"] },
-    { name: "경량패딩", paths: ["M23 9 17 13 10 29l9 4 4-6v27h18V27l4 6 9-4-7-16-7-4-7 4h-6z", "M32 13v41", "M23 30h18"] },
-    { name: "무스탕", paths: ["M23 12 17 15 10 30l9 4 4-6v26h18V28l4 6 9-4-7-15-7-3-7 4h-6z", "M25 10l7 8 7-8", "M23 24h18", "M24 13h16"] },
-    { name: "후리스", paths: ["M23 11 17 14 10 29l9 4 4-6v27h18V27l4 6 9-4-7-15-7-3-7 4h-6z", "M26 12l6 8 6-8", "M32 20v33", "M23 38h7v8h-7z"] },
-    { name: "가죽재킷", paths: ["M23 10 17 14 10 29l9 4 4-6v26h18V27l4 6 9-4-7-15-7-4-8 5z", "M23 10l9 10 9-10", "M32 20v33", "M26 25l12 10"] },
-    { name: "블레이저", paths: ["M23 10 17 14 10 29l9 4 4-6v26h18V27l4 6 9-4-7-15-7-4-8 5z", "M23 10l9 10 9-10", "M32 20v33", "M29 31h1", "M29 39h1"] },
-    { name: "가디건", paths: ["M24 10 17 14 10 29l9 4 4-6v26h18V27l4 6 9-4-7-15-7-4-8 5z", "M24 10l8 10 8-10", "M32 20v33", "M30 29h1", "M30 37h1", "M30 45h1"] },
-    { name: "바람막이", paths: ["M24 9 17 14 10 29l9 4 4-6v26h18V27l4 6 9-4-7-15-7-4-8 5z", "M24 9q8-8 16 0", "M32 17v36", "M28 25h8"] },
-    { name: "셔츠", paths: ["M24 10 18 14 12 26l8 4 4-5v28h16V25l4 5 8-4-6-12-6-4-8 8-8-8z", "M24 10l8 8 8-8", "M32 18v35", "M30 27h1", "M30 35h1", "M30 43h1"] },
+    { name: "패딩", paths: ["M24 8 17 13 9 29l9 4 4-7v30h20V26l4 7 9-4-8-16-7-5-8 6-8-6z", "M25 9l7 7 7-7", "M32 16v40", "M22 27h20", "M22 37h20", "M22 47h20", "M9 29l-2 6 11 4", "M55 29l2 6-11 4"] },
+    { name: "경량패딩", paths: ["M24 8 17 13 9 29l9 4 4-7v30h20V26l4 7 9-4-8-16-7-5-8 6-8-6z", "M24 9l8 7 8-7", "M32 16v40", "M22 30l20 7", "M22 41l20 7", "M9 29l-2 6 11 4", "M55 29l2 6-11 4"] },
+    { name: "무스탕", paths: ["M24 10 17 14 9 29l9 4 4-7v30h20V26l4 7 9-4-8-15-7-4-8 6-8-6z", "M23 9l9 8 9-8", "M23 10l9 10 9-10", "M32 19v37", "M22 30h8", "M34 30h8", "M22 43h8", "M34 43h8"] },
+    { name: "후리스", paths: ["M24 8 17 13 9 29l9 4 4-7v30h20V26l4 7 9-4-8-16-7-5-8 6-8-6z", "M24 9l8 8 8-8", "M32 17v39", "M23 39h7v9h-7z", "M34 39h7v9h-7z", "M9 29l-2 6 11 4", "M55 29l2 6-11 4"] },
+    { name: "가죽재킷", paths: ["M24 8 17 13 9 29l9 4 4-7v30h20V26l4 7 9-4-8-16-7-5-8 6-8-6z", "M23 9l9 9 9-9", "M23 10l9 12 9-12", "M32 21v35", "M22 32h8l-8 8", "M42 32h-8l8 8", "M9 29l-2 6 11 4", "M55 29l2 6-11 4"] },
+    { name: "블레이저", paths: ["M24 8 17 13 9 29l9 4 4-7v30h20V26l4 7 9-4-8-16-7-5-8 6-8-6z", "M23 9l9 9 9-9", "M23 10l9 12 9-12", "M32 21v35", "M24 31h6l-6 8", "M40 31h-6l6 8", "M31 30h2", "M31 39h2", "M9 29l-2 6 11 4", "M55 29l2 6-11 4"] },
+    { name: "가디건", paths: ["M24 8 17 13 9 29l9 4 4-7v30h20V26l4 7 9-4-8-16-7-5-8 6-8-6z", "M23 9l9 9 9-9", "M23 10l9 12v34", "M41 10l-9 12", "M30 30h2", "M30 38h2", "M30 46h2", "M9 29l-2 6 11 4", "M55 29l2 6-11 4"] },
+    { name: "바람막이", paths: ["M24 13 17 16 9 30l9 4 4-7v29h20V27l4 7 9-4-8-14-7-3-8 5-8-5z", "M22 14q10-12 20 0", "M24 14l8 8 8-8", "M32 22v34", "M27 27h10", "M9 30l-2 6 11 4", "M55 30l2 6-11 4"] },
+    { name: "셔츠", paths: ["M24 9 18 13 11 27l8 4 4-6v31h18V25l4 6 8-4-7-14-7-4-7 7-7-7z", "M24 9l8 9 8-9", "M32 18v38", "M30 27h2", "M30 35h2", "M30 43h2", "M11 27l-2 6 10 4", "M53 27l2 6-10 4"] },
     { name: "기타", paths: ["M32 11v8", "M32 11a4 4 0 1 0-4 4", "M32 19 10 39h44L32 19z"] },
   ];
 
   function showError(message) {
     error.textContent = message;
     error.hidden = !message;
+  }
+
+  function showSaveNotice(message, duration = 0) {
+    window.clearTimeout(saveNoticeTimer);
+    notice.textContent = message;
+    notice.hidden = false;
+    if (duration > 0) {
+      saveNoticeTimer = window.setTimeout(() => {
+        notice.hidden = true;
+      }, duration);
+    }
   }
 
   function readSettings() {
@@ -113,7 +124,6 @@
     selectedOuterType = type;
     outerNickname.value = nickname;
     renderOuterTypeOptions();
-    renderOuterOptions();
   }
 
   function deleteRecord(record) {
@@ -220,6 +230,27 @@
       + " · 기온 " + temperatureText(result.temp) + " · " + precipitationText(result.precip);
   }
 
+  async function renderTemperatureComparison(todayWeather) {
+    const comparison = document.getElementById("temperature-comparison");
+    comparison.hidden = true;
+    comparison.textContent = "";
+    if (!settings || todayWeather.manualTemp) return;
+
+    try {
+      const previousDate = weather.previousDate(todayWeather.date);
+      const previousWeather = await weather.fetchForDate(settings, previousDate);
+      if (currentWeather !== todayWeather) return;
+      const difference = Math.round(todayWeather.temp - previousWeather.temp);
+      const today = weather.localDate(new Date());
+      const referenceLabel = previousDate === today ? "오늘보다" : "어제보다";
+      const differenceText = difference > 0 ? "+" + difference : String(difference);
+      comparison.textContent = referenceLabel + " " + differenceText + "°";
+      comparison.hidden = false;
+    } catch {
+      comparison.hidden = true;
+    }
+  }
+
   function basicOuterSuggestions(feelsLike) {
     if (feelsLike <= -1) return ["패딩", "무스탕", "후리스", "경량패딩", "가죽재킷", "블레이저", "가디건", "바람막이", "셔츠", "기타"];
     if (feelsLike <= 5) return ["패딩", "경량패딩", "후리스", "무스탕", "가죽재킷", "블레이저", "가디건", "바람막이", "셔츠", "기타"];
@@ -277,7 +308,7 @@
     document.getElementById("recommendation-title").textContent = "오늘의 추천 아우터";
     if (!records.length) {
       message.hidden = false;
-      message.textContent = "기본 가이드 · " + rules.basicGuide(result.feelsLike);
+      message.textContent = rules.basicGuide(result.feelsLike);
     } else {
       message.hidden = true;
     }
@@ -319,35 +350,23 @@
     document.getElementById("weather-date").textContent = today.replaceAll("-", ".") + " · 오늘";
     renderWeatherIllustration("sunny");
     if (!settings) {
+      document.getElementById("temperature-comparison").hidden = true;
       caption.textContent = "위치 화면에서 지역과 외출 시간을 먼저 선택해 주세요.";
       return;
     }
     caption.textContent = "날씨를 불러오는 중이에요.";
+    document.getElementById("temperature-comparison").hidden = true;
     retry.hidden = true;
     try {
       currentWeather = await weather.getWeather(settings);
       renderWeather(caption, currentWeather);
+      renderTemperatureComparison(currentWeather);
       renderRecommendations(currentWeather);
     } catch {
       currentWeather = null;
+      document.getElementById("temperature-comparison").hidden = true;
       caption.textContent = "날씨를 불러오지 못했어요. 기록할 때 온도를 직접 입력할 수 있어요.";
       retry.hidden = false;
-    }
-  }
-
-  function renderOuterOptions() {
-    outerOptions.replaceChildren();
-    for (const outer of storage.loadData().outers) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "outer-option";
-      button.textContent = outer.nickname ? outer.type + " · " + outer.nickname : outer.type;
-      button.setAttribute("aria-pressed", String(selectedOuterType === outer.type
-        && outerNickname.value.trim() === outer.nickname));
-      button.addEventListener("click", () => {
-        selectOuterType(outer.type, outer.nickname);
-      });
-      outerOptions.append(button);
     }
   }
 
@@ -387,14 +406,10 @@
     selectedOuterType = "";
     outerNickname.value = "";
     renderOuterTypeOptions();
-    renderOuterOptions();
     loadRecordWeather();
   }
 
   function updateRecordDateLabels() {
-    const isToday = recordDate.value === weather.localDate(new Date());
-    document.getElementById("add-title").textContent = isToday ? "오늘 입은 옷" : "어제 입은 옷";
-    document.getElementById("record-date-intro").textContent = "그날 어떤 옷을 입었고, 어떻게 느꼈나요?";
     document.getElementById("record-rating-legend").textContent = "그날 어땠나요?";
   }
 
@@ -437,8 +452,7 @@
       return;
     }
     recordForm.reset();
-    notice.textContent = "선택한 날짜의 옷을 기록했어요.";
-    notice.hidden = false;
+    showSaveNotice("선택한 날짜의 옷을 기록했어요.", 5000);
     window.location.hash = "home";
   }
 
@@ -559,13 +573,13 @@
     }
 
     const heading = activeScreen.querySelector("h1");
-    document.title = (heading?.textContent || "오늘") + " · 옷 고르기";
-    if (activeScreen.id === "home") {
-      document.body.classList.add("home-view");
-      fetchWeather();
-    } else {
-      document.body.classList.remove("home-view");
-    }
+    const screenTitle = heading?.textContent
+      || (activeScreen.id === "settings" ? "위치 설정" : activeScreen.id === "add" ? "기록 추가" : "오늘");
+    document.title = screenTitle + " · 옷 고르기";
+    const dashboardScreen = ["home", "records", "add", "settings"].includes(activeScreen.id);
+    document.body.classList.toggle("dashboard-view", dashboardScreen);
+    document.body.classList.toggle("home-view", activeScreen.id === "home");
+    if (activeScreen.id === "home") fetchWeather();
     if (activeScreen.id === "records") renderRecords();
     if (activeScreen.id === "add") prepareRecord();
     if (moveFocus) {
@@ -600,3 +614,4 @@
   showScreen(false);
   loadRegions();
 })();
+
