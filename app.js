@@ -13,9 +13,11 @@
   const notice = document.getElementById("save-notice");
   const retryButton = document.getElementById("retry-regions");
   const recordForm = document.getElementById("record-form");
+  const recordDate = document.getElementById("record-date");
   const recordError = document.getElementById("weather-error");
   const manualTemperature = document.getElementById("manual-temperature");
-  const outerInput = document.getElementById("outer");
+  const outerTypesContainer = document.getElementById("outer-types");
+  const outerNickname = document.getElementById("outer-nickname");
   const outerOptions = document.getElementById("outer-options");
   const storage = window.OutwearStorage;
   const weather = window.OutwearWeather;
@@ -24,6 +26,19 @@
   let settings = null;
   let currentWeather = null;
   let recordWeather = null;
+  let selectedOuterType = "";
+  const outerTypes = [
+    { name: "패딩", paths: ["M23 9 17 13 10 29l9 4 4-6v27h18V27l4 6 9-4-7-16-7-4-7 4h-6z", "M23 23h18", "M23 32h18", "M23 41h18"] },
+    { name: "경량패딩", paths: ["M23 9 17 13 10 29l9 4 4-6v27h18V27l4 6 9-4-7-16-7-4-7 4h-6z", "M32 13v41", "M23 30h18"] },
+    { name: "무스탕", paths: ["M23 12 17 15 10 30l9 4 4-6v26h18V28l4 6 9-4-7-15-7-3-7 4h-6z", "M25 10l7 8 7-8", "M23 24h18", "M24 13h16"] },
+    { name: "후리스", paths: ["M23 11 17 14 10 29l9 4 4-6v27h18V27l4 6 9-4-7-15-7-3-7 4h-6z", "M26 12l6 8 6-8", "M32 20v33", "M23 38h7v8h-7z"] },
+    { name: "가죽재킷", paths: ["M23 10 17 14 10 29l9 4 4-6v26h18V27l4 6 9-4-7-15-7-4-8 5z", "M23 10l9 10 9-10", "M32 20v33", "M26 25l12 10"] },
+    { name: "블레이저", paths: ["M23 10 17 14 10 29l9 4 4-6v26h18V27l4 6 9-4-7-15-7-4-8 5z", "M23 10l9 10 9-10", "M32 20v33", "M29 31h1", "M29 39h1"] },
+    { name: "가디건", paths: ["M24 10 17 14 10 29l9 4 4-6v26h18V27l4 6 9-4-7-15-7-4-8 5z", "M24 10l8 10 8-10", "M32 20v33", "M30 29h1", "M30 37h1", "M30 45h1"] },
+    { name: "바람막이", paths: ["M24 9 17 14 10 29l9 4 4-6v26h18V27l4 6 9-4-7-15-7-4-8 5z", "M24 9q8-8 16 0", "M32 17v36", "M28 25h8"] },
+    { name: "셔츠", paths: ["M24 10 18 14 12 26l8 4 4-5v28h16V25l4 5 8-4-6-12-6-4-8 8-8-8z", "M24 10l8 8 8-8", "M32 18v35", "M30 27h1", "M30 35h1", "M30 43h1"] },
+    { name: "기타", paths: ["M32 11v8", "M32 11a4 4 0 1 0-4 4", "M32 19 10 39h44L32 19z"] },
+  ];
 
   function showError(message) {
     error.textContent = message;
@@ -40,12 +55,6 @@
     }
   }
 
-  function updateSummary() {
-    document.getElementById("settings-summary").textContent = settings
-      ? settings.region + " · " + settings.outStart + "–" + settings.outEnd
-      : "오늘 외출 시간대";
-  }
-
   function renderRecords() {
     const list = document.getElementById("record-list");
     const records = storage.loadData().records;
@@ -55,6 +64,9 @@
     for (const record of [...records].reverse()) {
       const card = document.createElement("article");
       card.className = "record-item";
+      card.tabIndex = 0;
+      card.setAttribute("role", "button");
+      card.setAttribute("aria-label", record.date + " " + record.outer + " 기록. 길게 누르거나 Enter 키를 눌러 삭제할 수 있어요.");
       const outer = document.createElement("strong");
       outer.textContent = record.outer;
       const detail = document.createElement("span");
@@ -62,8 +74,79 @@
         + " · " + (ratings[record.rating] || "평가") + (record.inner ? " · " + record.inner : "")
         + (record.manualTemp ? " · 직접 입력" : "");
       card.append(outer, detail);
+      enableRecordDeletion(card, record);
       list.append(card);
     }
+  }
+
+  function renderOuterTypeOptions() {
+    outerTypesContainer.replaceChildren();
+    for (const outerType of outerTypes) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "outer-type-option";
+      button.setAttribute("aria-pressed", String(selectedOuterType === outerType.name));
+      const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      icon.setAttribute("viewBox", "0 0 64 64");
+      icon.setAttribute("aria-hidden", "true");
+      icon.setAttribute("focusable", "false");
+      for (const shape of outerType.paths) {
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", shape);
+        icon.append(path);
+      }
+      const label = document.createElement("span");
+      label.textContent = outerType.name;
+      button.append(icon, label);
+      button.addEventListener("click", () => selectOuterType(outerType.name));
+      outerTypesContainer.append(button);
+    }
+  }
+
+  function selectOuterType(type, nickname = "") {
+    selectedOuterType = type;
+    outerNickname.value = nickname;
+    renderOuterTypeOptions();
+    renderOuterOptions();
+  }
+
+  function deleteRecord(record) {
+    if (!window.confirm(record.outer + " 기록을 삭제할까요?")) return;
+    try {
+      if (!storage.deleteRecord(record.id)) {
+        notice.textContent = "기록을 찾지 못했어요. 목록을 새로 고쳤어요.";
+      } else {
+        notice.textContent = "기록을 삭제했어요.";
+      }
+      notice.hidden = false;
+      renderRecords();
+    } catch {
+      notice.textContent = "기록을 삭제하지 못했어요. 브라우저 저장 공간을 확인해 주세요.";
+      notice.hidden = false;
+    }
+  }
+
+  function enableRecordDeletion(card, record) {
+    let pressTimer = null;
+    const cancelPress = () => {
+      window.clearTimeout(pressTimer);
+      pressTimer = null;
+    };
+    card.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      cancelPress();
+      pressTimer = window.setTimeout(() => deleteRecord(record), 600);
+    });
+    card.addEventListener("pointerup", cancelPress);
+    card.addEventListener("pointerleave", cancelPress);
+    card.addEventListener("pointercancel", cancelPress);
+    card.addEventListener("contextmenu", (event) => event.preventDefault());
+    card.addEventListener("keydown", (event) => {
+      if ((event.key === "Enter" || event.key === " ") && !event.repeat) {
+        event.preventDefault();
+        deleteRecord(record);
+      }
+    });
   }
 
   function temperatureText(value) {
@@ -74,47 +157,144 @@
     return value === "rain" ? "비" : value === "snow" ? "눈" : "강수 없음";
   }
 
+  function renderWeatherIllustration(condition) {
+    const art = document.getElementById("weather-art");
+    const svgNamespace = "http://www.w3.org/2000/svg";
+    const cloud = "M25 62h56a16 16 0 0 0 0-32 23 23 0 0 0-44-6 17 17 0 0 0-12 38z";
+    const scenes = {
+      sunny: [
+        { tag: "path", attrs: { d: "M34 7v8M34 55v8M10 31h8M50 31h8M17 14l6 6M45 44l6 6M51 14l-6 6M23 44l-6 6", stroke: "#ffdc54", "stroke-width": 4, "stroke-linecap": "round" } },
+        { tag: "circle", attrs: { cx: 34, cy: 31, r: 18, fill: "#ffdc54" } },
+      ],
+      "partly-cloudy": [
+        { tag: "path", attrs: { d: "M39 13v6M20 32h6M53 20l-5 5M24 19l4 4", stroke: "#ffdc54", "stroke-width": 3.5, "stroke-linecap": "round" } },
+        { tag: "circle", attrs: { cx: 39, cy: 31, r: 17, fill: "#ffdc54" } },
+        { tag: "path", attrs: { d: cloud, fill: "#c6e7f8" } },
+        { tag: "path", attrs: { d: cloud, fill: "#fff" } },
+      ],
+      cloudy: [
+        { tag: "path", attrs: { d: "M29 63h53a16 16 0 0 0-1-32 23 23 0 0 0-42-5 17 17 0 0 0-10 37z", fill: "#bcd8ea" } },
+        { tag: "path", attrs: { d: cloud, fill: "#fff" } },
+      ],
+      rain: [
+        { tag: "path", attrs: { d: "M25 57h56a16 16 0 0 0 0-32 23 23 0 0 0-44-6 17 17 0 0 0-12 38z", fill: "#d6e8f3" } },
+        { tag: "path", attrs: { d: "M34 67l-3 8M54 67l-3 8M74 67l-3 8", stroke: "#6ac4ed", "stroke-width": 4, "stroke-linecap": "round" } },
+      ],
+      snow: [
+        { tag: "path", attrs: { d: "M25 57h56a16 16 0 0 0 0-32 23 23 0 0 0-44-6 17 17 0 0 0-12 38z", fill: "#d6e8f3" } },
+        { tag: "path", attrs: { d: "M36 68v8M32 70l8 4M40 70l-8 4M57 68v8M53 70l8 4M61 70l-8 4M78 68v8M74 70l8 4M82 70l-8 4", stroke: "#fff", "stroke-width": 2.5, "stroke-linecap": "round" } },
+      ],
+    };
+    const labels = { sunny: "화창한 날씨", "partly-cloudy": "구름 조금 낀 날씨", cloudy: "흐린 날씨", rain: "비 오는 날씨", snow: "눈 오는 날씨" };
+    const svg = document.createElementNS(svgNamespace, "svg");
+    svg.setAttribute("viewBox", "0 0 120 90");
+    svg.setAttribute("aria-hidden", "true");
+    for (const shape of scenes[condition] || scenes.sunny) {
+      const element = document.createElementNS(svgNamespace, shape.tag);
+      for (const [name, value] of Object.entries(shape.attrs)) element.setAttribute(name, String(value));
+      svg.append(element);
+    }
+    art.replaceChildren(svg);
+    art.setAttribute("aria-label", labels[condition] || labels.sunny);
+  }
+
   function renderWeather(target, result) {
-    const dayLabel = result.date === weather.localDate(new Date()) ? "오늘" : "내일 기준";
-    target.textContent = dayLabel + " · 체감 " + temperatureText(result.feelsLike)
+    const today = weather.localDate(new Date());
+    const dayLabel = result.date === today ? "오늘"
+      : result.date === weather.previousDate(today) ? "어제" : "내일 기준";
+    const dateLabel = result.date.replaceAll("-", ".") + " · " + dayLabel;
+    if (target.id === "weather-caption") {
+      document.getElementById("weather-date").textContent = dateLabel;
+      renderWeatherIllustration(result.condition || (result.precip === "none" ? "sunny" : result.precip));
+      document.querySelector("#home .temperature").firstChild.textContent = String(Math.round(result.feelsLike));
+      target.textContent = "기온 " + temperatureText(result.temp) + " · " + precipitationText(result.precip);
+      return;
+    }
+    target.textContent = dateLabel + " · 체감 " + temperatureText(result.feelsLike)
       + " · 기온 " + temperatureText(result.temp) + " · " + precipitationText(result.precip);
+  }
+
+  function basicOuterSuggestions(feelsLike) {
+    if (feelsLike <= -1) return ["패딩", "무스탕", "후리스"];
+    if (feelsLike <= 5) return ["패딩", "경량패딩", "후리스"];
+    if (feelsLike <= 10) return ["패딩", "무스탕", "블레이저"];
+    if (feelsLike <= 15) return ["경량패딩", "가디건", "바람막이"];
+    if (feelsLike <= 20) return ["가디건", "바람막이", "셔츠"];
+    return ["셔츠", "가디건", "바람막이"];
+  }
+
+  function createRecommendationIcon(typeName) {
+    const outerType = outerTypes.find((item) => item.name === typeName)
+      || outerTypes.find((item) => item.name === "기타");
+    const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    icon.setAttribute("viewBox", "0 0 64 64");
+    icon.setAttribute("aria-hidden", "true");
+    for (const pathData of outerType.paths) {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", pathData);
+      icon.append(path);
+    }
+    return icon;
+  }
+
+  function appendRecommendation(list, { typeName, label, detail = "", ratingText, ratingClass = "rating-base" }) {
+    const card = document.createElement("article");
+    card.className = "recommendation-option";
+    const iconWrap = document.createElement("span");
+    iconWrap.className = "recommendation-icon";
+    iconWrap.append(createRecommendationIcon(typeName));
+    const copy = document.createElement("div");
+    copy.className = "recommendation-copy";
+    const outer = document.createElement("strong");
+    outer.textContent = label;
+    copy.append(outer);
+    if (detail) {
+      const description = document.createElement("span");
+      description.textContent = detail;
+      copy.append(description);
+    }
+    const rating = document.createElement("span");
+    rating.className = "recommendation-rating " + ratingClass;
+    rating.textContent = ratingText;
+    card.append(iconWrap, copy, rating);
+    list.append(card);
   }
 
   function renderRecommendations(result) {
     const panel = document.getElementById("recommendations");
     const message = document.getElementById("recommendation-message");
     const list = document.getElementById("recommendation-list");
-    const addLink = document.getElementById("recommendation-add");
     const records = rules.recommend(storage.loadData().records, result.feelsLike, result.precip);
     panel.hidden = false;
     list.replaceChildren();
-    addLink.hidden = records.length > 0;
-
+    document.getElementById("recommendation-title").textContent = "오늘의 추천 아우터";
     if (!records.length) {
-      document.getElementById("recommendation-title").textContent = "기본 가이드";
-      message.textContent = "비슷한 온도의 기록이 아직 없어요. " + rules.basicGuide(result.feelsLike);
+      message.hidden = false;
+      message.textContent = "기본 가이드 · " + rules.basicGuide(result.feelsLike);
+      for (const typeName of basicOuterSuggestions(result.feelsLike)) {
+        appendRecommendation(list, { typeName, label: typeName, ratingText: "기본 추천" });
+      }
       return;
     }
 
-    document.getElementById("recommendation-title").textContent = "비슷한 날의 내 기록 (±3°C)";
-    message.textContent = "적당했던 옷을 먼저 보여드려요.";
+    message.hidden = true;
     const ratings = { ok: "적당", cold: "추웠음", hot: "더웠음" };
-    for (const record of records) {
-      const card = document.createElement("article");
-      card.className = "record-item";
-      const outer = document.createElement("strong");
-      outer.textContent = record.outer;
-      const detail = document.createElement("span");
-      detail.textContent = record.date + " · 체감 " + temperatureText(record.feelsLike)
-        + " · " + ratings[record.rating] + (record.inner ? " · " + record.inner : "");
-      card.append(outer, detail);
+    for (const record of records.slice(0, 3)) {
+      const typeName = record.outerType || record.outer.split(" · ")[0];
+      appendRecommendation(list, {
+        typeName,
+        label: record.outer,
+        detail: record.date + " · 체감 " + temperatureText(record.feelsLike)
+          + (record.inner ? " · " + record.inner : ""),
+        ratingText: ratings[record.rating],
+        ratingClass: "rating-" + record.rating,
+      });
       if (result.precip !== "none" && record.precip === result.precip) {
         const condition = document.createElement("span");
         condition.className = "record-condition";
         condition.textContent = precipitationText(record.precip) + " 온 날";
-        outer.append(condition);
+        list.lastElementChild.querySelector("strong").append(condition);
       }
-      list.append(card);
     }
   }
 
@@ -122,6 +302,7 @@
     const panel = document.getElementById("recommendations");
     const message = document.getElementById("recommendation-message");
     panel.hidden = false;
+    message.hidden = false;
     message.textContent = "날씨를 확인하고 있어요.";
     if (!currentWeather) {
       try {
@@ -139,6 +320,9 @@
   async function fetchWeather() {
     const caption = document.getElementById("weather-caption");
     const retry = document.getElementById("load-weather");
+    const today = weather.localDate(new Date());
+    document.getElementById("weather-date").textContent = today.replaceAll("-", ".") + " · 오늘";
+    renderWeatherIllustration("sunny");
     if (!settings) {
       caption.textContent = "지역과 외출 시간을 먼저 설정해 주세요.";
       return;
@@ -148,6 +332,7 @@
     try {
       currentWeather = await weather.getWeather(settings);
       renderWeather(caption, currentWeather);
+      renderRecommendations(currentWeather);
     } catch {
       currentWeather = null;
       caption.textContent = "날씨를 불러오지 못했어요. 기록할 때 온도를 직접 입력할 수 있어요.";
@@ -157,33 +342,39 @@
 
   function renderOuterOptions() {
     outerOptions.replaceChildren();
-    for (const name of storage.loadData().outers) {
+    for (const outer of storage.loadData().outers) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "outer-option";
-      button.textContent = name;
-      button.setAttribute("aria-pressed", String(outerInput.value === name));
+      button.textContent = outer.nickname ? outer.type + " · " + outer.nickname : outer.type;
+      button.setAttribute("aria-pressed", String(selectedOuterType === outer.type
+        && outerNickname.value.trim() === outer.nickname));
       button.addEventListener("click", () => {
-        outerInput.value = name;
-        for (const option of outerOptions.children) {
-          option.setAttribute("aria-pressed", String(option === button));
-        }
+        selectOuterType(outer.type, outer.nickname);
       });
       outerOptions.append(button);
     }
   }
 
-  async function prepareRecord() {
+  async function loadRecordWeather() {
     recordError.hidden = true;
     manualTemperature.hidden = true;
     recordWeather = null;
-    document.getElementById("record-weather").textContent = "오늘 외출 시간대 날씨를 불러오는 중이에요.";
-    renderOuterOptions();
+    document.getElementById("record-weather").textContent = "선택한 날짜의 날씨를 불러오는 중이에요.";
+    const selectedDate = recordDate.value;
     try {
       if (!settings) throw new Error("설정 화면에서 지역과 외출 시간을 먼저 저장해 주세요.");
-      recordWeather = await weather.getWeather(settings);
+      const today = weather.localDate(new Date());
+      const yesterday = weather.previousDate(today);
+      if (![today, yesterday].includes(selectedDate)) {
+        throw new Error("오늘 또는 어제 날짜를 선택해 주세요.");
+      }
+      const result = await weather.fetchForDate(settings, selectedDate);
+      if (recordDate.value !== selectedDate) return;
+      recordWeather = result;
       renderWeather(document.getElementById("record-weather"), recordWeather);
     } catch (error) {
+      if (recordDate.value !== selectedDate) return;
       recordError.textContent = (error.message || "날씨를 불러오지 못했어요.")
         + " 온도와 아우터, 평가를 입력해 기록할 수 있어요.";
       recordError.hidden = false;
@@ -192,16 +383,37 @@
     }
   }
 
+  function prepareRecord() {
+    const today = weather.localDate(new Date());
+    recordDate.value = today;
+    recordDate.max = today;
+    recordDate.min = weather.previousDate(today);
+    updateRecordDateLabels();
+    selectedOuterType = "";
+    outerNickname.value = "";
+    renderOuterTypeOptions();
+    renderOuterOptions();
+    loadRecordWeather();
+  }
+
+  function updateRecordDateLabels() {
+    const isToday = recordDate.value === weather.localDate(new Date());
+    document.getElementById("add-title").textContent = isToday ? "오늘 입은 옷" : "어제 입은 옷";
+    document.getElementById("record-date-intro").textContent = "그날 어떤 옷을 입었고, 어떻게 느꼈나요?";
+    document.getElementById("record-rating-legend").textContent = "그날 어땠나요?";
+  }
+
   function saveRecord(event) {
     event.preventDefault();
     recordError.hidden = true;
-    const outer = outerInput.value.trim();
+    const nickname = outerNickname.value.trim();
     const rating = recordForm.querySelector('input[name="rating"]:checked')?.value;
-    if (!outer || !rating) {
-      recordError.textContent = "아우터를 입력하고 오늘의 느낌을 선택해 주세요.";
+    if (!selectedOuterType || !rating) {
+      recordError.textContent = "아우터 종류와 그날의 느낌을 선택해 주세요.";
       recordError.hidden = false;
       return;
     }
+    const outer = nickname ? selectedOuterType + " · " + nickname : selectedOuterType;
     let conditions = recordWeather;
     if (!conditions) {
       const feelsLike = Number(document.getElementById("manual-feels-like").value);
@@ -213,10 +425,11 @@
         recordError.hidden = false;
         return;
       }
-      conditions = { date: weather.localDate(new Date()), feelsLike, temp, precip: "none", manualTemp: true };
+      conditions = { date: recordDate.value, feelsLike, temp, precip: "none", manualTemp: true };
     }
     const record = {
       id: window.crypto.randomUUID(), date: conditions.date, outer,
+      outerType: selectedOuterType, outerNickname: nickname,
       inner: document.getElementById("inner").value.trim(), rating,
       feelsLike: conditions.feelsLike, temp: conditions.temp,
       precip: conditions.precip, manualTemp: conditions.manualTemp,
@@ -229,7 +442,7 @@
       return;
     }
     recordForm.reset();
-    notice.textContent = "오늘 입은 옷을 기록했어요.";
+    notice.textContent = "선택한 날짜의 옷을 기록했어요.";
     notice.hidden = false;
     window.location.hash = "home";
   }
@@ -281,7 +494,6 @@
       }
       readSettings();
       restoreForm();
-      updateSummary();
       city.disabled = false;
       saveButton.disabled = false;
     } catch {
@@ -323,7 +535,6 @@
       return;
     }
     settings = nextSettings;
-    updateSummary();
     notice.textContent = "설정을 저장했어요.";
     notice.hidden = false;
     window.location.hash = "home";
@@ -352,14 +563,17 @@
     }
 
     const heading = activeScreen.querySelector("h1");
-    document.title = heading.textContent + " · 옷 고르기";
+    document.title = (heading?.textContent || "오늘") + " · 옷 고르기";
     if (activeScreen.id === "home") {
+      document.body.classList.add("home-view");
       renderRecords();
       fetchWeather();
+    } else {
+      document.body.classList.remove("home-view");
     }
     if (activeScreen.id === "add") prepareRecord();
     if (moveFocus) {
-      heading.focus({ preventScroll: true });
+      (heading || activeScreen).focus({ preventScroll: true });
       window.scrollTo(0, 0);
     }
   }
@@ -372,21 +586,23 @@
   form.addEventListener("input", () => { notice.hidden = true; });
   retryButton.addEventListener("click", loadRegions);
   document.getElementById("load-weather").addEventListener("click", fetchWeather);
+  recordDate.addEventListener("change", () => {
+    updateRecordDateLabels();
+    loadRecordWeather();
+  });
   document.getElementById("choose-outfit").addEventListener("click", chooseOutfit);
-  outerInput.addEventListener("input", renderOuterOptions);
   recordForm.addEventListener("submit", saveRecord);
   window.addEventListener("storage", (event) => {
     if (event.key !== storage.key && event.key !== null) return;
     readSettings();
     restoreForm();
-    updateSummary();
     notice.textContent = settings ? "다른 화면에서 변경한 설정을 불러왔어요." : "설정이 지워졌어요. 다시 선택해 주세요.";
     notice.hidden = false;
     if (!settings) window.location.hash = "settings";
   });
   readSettings();
   if (!settings) window.history.replaceState(null, "", "#settings");
-  updateSummary();
   showScreen(false);
   loadRegions();
 })();
+
