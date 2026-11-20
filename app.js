@@ -26,6 +26,7 @@
   let currentWeather = null;
   let recordWeather = null;
   let selectedOuterType = "";
+  let selectedRecordPeriod = weather.localDate(new Date()).slice(0, 7);
   let saveNoticeTimer = null;
   const outerTypes = [
     { name: "패딩", paths: ["M24 8 17 13 9 29l9 4 4-7v30h20V26l4 7 9-4-8-16-7-5-8 6-8-6z", "M25 9l7 7 7-7", "M32 16v40", "M22 27h20", "M22 37h20", "M22 47h20", "M9 29l-2 6 11 4", "M55 29l2 6-11 4"] },
@@ -72,31 +73,140 @@
     if (name) name.textContent = settings?.region || "위치 정보";
   }
 
+  function shiftedRecordPeriod(unit, direction) {
+    const [yearText, monthText] = selectedRecordPeriod.split("-");
+    let year = Number(yearText);
+    let month = Number(monthText);
+    const [currentYear, currentMonth] = weather.localDate(new Date()).slice(0, 7).split("-").map(Number);
+
+    if (unit === "year") {
+      year += direction;
+      if (year < 1940 || year > currentYear) return null;
+      if (year === currentYear && month > currentMonth) month = currentMonth;
+    } else {
+      const date = new Date(Date.UTC(year, month - 1 + direction, 1));
+      year = date.getUTCFullYear();
+      month = date.getUTCMonth() + 1;
+    }
+
+    const period = String(year).padStart(4, "0") + "-" + String(month).padStart(2, "0");
+    return period >= "1940-01" && period <= weather.localDate(new Date()).slice(0, 7) ? period : null;
+  }
+
+  function updateRecordPeriodPicker() {
+    const [year, month] = selectedRecordPeriod.split("-");
+    document.getElementById("selected-record-year").textContent = year;
+    document.getElementById("selected-record-month").textContent = Number(month) + "월";
+    document.getElementById("previous-record-year").disabled = !shiftedRecordPeriod("year", -1);
+    document.getElementById("next-record-year").disabled = !shiftedRecordPeriod("year", 1);
+    document.getElementById("previous-record-month").disabled = !shiftedRecordPeriod("month", -1);
+    document.getElementById("next-record-month").disabled = !shiftedRecordPeriod("month", 1);
+  }
+
+  function changeRecordPeriod(unit, direction) {
+    const period = shiftedRecordPeriod(unit, direction);
+    if (!period) return;
+    selectedRecordPeriod = period;
+    updateRecordPeriodPicker();
+    renderRecords();
+  }
+
   function renderRecords() {
     const list = document.getElementById("record-list");
     const records = storage.loadData().records;
     list.replaceChildren();
-    document.getElementById("record-empty").hidden = records.length > 0;
+    updateRecordPeriodPicker();
     const ratings = { cold: "추웠음", ok: "적당", hot: "더웠음" };
     const newestFirst = records.map((record, index) => ({ record, index }))
       .sort((a, b) => String(b.record.date || "").localeCompare(String(a.record.date || ""))
         || b.index - a.index)
       .map(({ record }) => record);
+    const groups = new Map();
     for (const record of newestFirst) {
-      const typeName = record.outerType || record.outer.split(" · ")[0];
-      const card = appendRecommendation(list, {
+      const [fallbackType, ...fallbackNickname] = String(record.outer || "기타").split(" · ");
+      const typeName = record.outerType || fallbackType;
+      const nickname = typeof record.outerNickname === "string" ? record.outerNickname : fallbackNickname.join(" · ");
+      const key = JSON.stringify([typeName, nickname]);
+      if (!groups.has(key)) groups.set(key, { typeName, nickname, records: [] });
+      groups.get(key).records.push(record);
+    }
+
+    const recordPositions = new Map(newestFirst.map((record, index) => [record, index]));
+    const visibleGroups = [...groups.values()].map((groupData) => {
+      const latest = groupData.records.find((record) => record.date?.slice(0, 7) === selectedRecordPeriod);
+      if (!latest) return null;
+      const latestIndex = groupData.records.indexOf(latest);
+      return { ...groupData, latest, previousRecords: groupData.records.slice(latestIndex + 1), position: recordPositions.get(latest) };
+    }).filter(Boolean).sort((a, b) => a.position - b.position);
+    const emptyBox = document.getElementById("record-empty");
+    emptyBox.hidden = visibleGroups.length > 0;
+    emptyBox.querySelector("p").textContent = records.length
+      ? selectedRecordPeriod.slice(0, 4) + "년 " + Number(selectedRecordPeriod.slice(5)) + "월 기록이 없어요."
+      : "아직 기록이 없어요.";
+
+    let groupIndex = 0;
+    for (const groupData of visibleGroups) {
+      const { typeName, nickname, latest, previousRecords } = groupData;
+      const group = document.createElement("div");
+      group.className = "record-history-group";
+      list.append(group);
+
+      const previousPanel = document.createElement("div");
+      previousPanel.className = "record-history-previous";
+      previousPanel.id = "record-history-previous-" + groupIndex;
+
+      const detailFor = (record) => record.date + " · 체감 " + temperatureText(record.feelsLike)
+        + (record.inner ? " · " + record.inner : "") + (record.manualTemp ? " · 직접 입력" : "");
+      const labelFor = (record) => record.outer || (typeName + (nickname ? " · " + nickname : ""));
+      const latestCard = appendRecommendation(group, {
         typeName,
-        label: record.outer,
-        detail: record.date + " · 체감 " + temperatureText(record.feelsLike)
-          + (record.inner ? " · " + record.inner : "") + (record.manualTemp ? " · 직접 입력" : ""),
-        ratingText: ratings[record.rating] || "기록",
-        ratingClass: "rating-" + (record.rating || "base"),
+        label: labelFor(latest),
+        detail: detailFor(latest) + (previousRecords.length ? " · 이전 기록 " + previousRecords.length + "개 보기" : ""),
+        ratingText: ratings[latest.rating] || "기록",
+        ratingClass: "rating-" + (latest.rating || "base"),
       });
-      card.classList.add("record-history-option");
-      card.tabIndex = 0;
-      card.setAttribute("role", "button");
-      card.setAttribute("aria-label", record.date + " " + record.outer + " 기록. 길게 누르거나 Enter 키를 눌러 삭제할 수 있어요.");
-      enableRecordDeletion(card, record);
+      latestCard.classList.add("record-history-option");
+      latestCard.tabIndex = 0;
+      latestCard.setAttribute("role", previousRecords.length ? "button" : "group");
+      latestCard.setAttribute("aria-label", latest.date + " " + labelFor(latest) + " 기록"
+        + (previousRecords.length ? ". 눌러서 이전 기록 " + previousRecords.length + "개 보기" : "")
+        + ". 길게 누르거나 Delete 키를 눌러 삭제할 수 있어요.");
+      enableRecordDeletion(latestCard, latest);
+
+      if (previousRecords.length) {
+        latestCard.setAttribute("aria-controls", previousPanel.id);
+        latestCard.setAttribute("aria-expanded", "false");
+        latestCard.addEventListener("click", () => {
+          previousPanel.hidden = !previousPanel.hidden;
+          latestCard.setAttribute("aria-expanded", String(!previousPanel.hidden));
+        });
+        latestCard.addEventListener("keydown", (event) => {
+          if ((event.key === "Enter" || event.key === " ") && !event.repeat) {
+            event.preventDefault();
+            latestCard.click();
+          }
+        });
+
+        previousPanel.hidden = true;
+        group.append(previousPanel);
+        for (const record of previousRecords) {
+          const previousCard = appendRecommendation(previousPanel, {
+            typeName,
+            label: labelFor(record),
+            detail: detailFor(record),
+            ratingText: ratings[record.rating] || "기록",
+            ratingClass: "rating-" + (record.rating || "base"),
+          });
+          previousCard.classList.add("record-history-option", "record-history-previous-option");
+          previousCard.tabIndex = 0;
+          previousCard.setAttribute("aria-label", record.date + " " + labelFor(record)
+            + " 기록. 길게 누르거나 Delete 키를 눌러 삭제할 수 있어요.");
+          enableRecordDeletion(previousCard, record);
+        }
+      } else {
+        latestCard.classList.add("record-history-single");
+      }
+      groupIndex += 1;
     }
   }
 
@@ -148,6 +258,7 @@
 
   function enableRecordDeletion(card, record) {
     let pressTimer = null;
+    let longPressTriggered = false;
     const cancelPress = () => {
       window.clearTimeout(pressTimer);
       pressTimer = null;
@@ -155,14 +266,24 @@
     card.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
       cancelPress();
-      pressTimer = window.setTimeout(() => deleteRecord(record), 600);
+      longPressTriggered = false;
+      pressTimer = window.setTimeout(() => {
+        longPressTriggered = true;
+        deleteRecord(record);
+      }, 600);
+    });
+    card.addEventListener("click", (event) => {
+      if (!longPressTriggered) return;
+      longPressTriggered = false;
+      event.preventDefault();
+      event.stopImmediatePropagation();
     });
     card.addEventListener("pointerup", cancelPress);
     card.addEventListener("pointerleave", cancelPress);
     card.addEventListener("pointercancel", cancelPress);
     card.addEventListener("contextmenu", (event) => event.preventDefault());
     card.addEventListener("keydown", (event) => {
-      if ((event.key === "Enter" || event.key === " ") && !event.repeat) {
+      if (event.key === "Delete" && !event.repeat) {
         event.preventDefault();
         deleteRecord(record);
       }
@@ -575,7 +696,7 @@
     const heading = activeScreen.querySelector("h1");
     const screenTitle = heading?.textContent
       || (activeScreen.id === "settings" ? "위치 설정" : activeScreen.id === "add" ? "기록 추가" : "오늘");
-    document.title = screenTitle + " · 옷 고르기";
+    document.title = screenTitle + " · quickwear";
     const dashboardScreen = ["home", "records", "add", "settings"].includes(activeScreen.id);
     document.body.classList.toggle("dashboard-view", dashboardScreen);
     document.body.classList.toggle("home-view", activeScreen.id === "home");
@@ -596,6 +717,10 @@
   form.addEventListener("input", () => { notice.hidden = true; });
   retryButton.addEventListener("click", loadRegions);
   document.getElementById("load-weather").addEventListener("click", fetchWeather);
+  document.getElementById("previous-record-year").addEventListener("click", () => changeRecordPeriod("year", -1));
+  document.getElementById("next-record-year").addEventListener("click", () => changeRecordPeriod("year", 1));
+  document.getElementById("previous-record-month").addEventListener("click", () => changeRecordPeriod("month", -1));
+  document.getElementById("next-record-month").addEventListener("click", () => changeRecordPeriod("month", 1));
   recordDate.addEventListener("change", () => {
     updateRecordDateLabels();
     loadRecordWeather();
@@ -611,6 +736,7 @@
   });
   readSettings();
   if (!settings) window.history.replaceState(null, "", "#settings");
+  updateRecordPeriodPicker();
   showScreen(false);
   loadRegions();
 })();

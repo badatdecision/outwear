@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#fffaf0">
-    <title>위치 · 옷 고르기</title>
+    <title>quickwear</title>
     <link rel="stylesheet" href="style.css">
     <!-- Local file preview snapshot of regions.json. Keep both datasets in sync. -->
     <script id="region-data" type="application/json">
@@ -606,7 +606,12 @@
   </head>
   <body>
     <header class="site-header">
-      <a class="brand" href="#home">옷 고르기<span aria-hidden="true">.</span></a>
+      <a class="brand" href="#home" aria-label="quickwear 홈">
+        <svg class="brand-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M12 8.3V6.8a1.8 1.8 0 1 0-1.8-1.8M12 8.3 3.3 13.5c-.9.5-.5 1.9.5 1.9h16.4c1 0 1.4-1.4.5-1.9L12 8.3Z" />
+        </svg>
+        quickwear
+      </a>
       <nav aria-label="주요 메뉴">
         <a href="#home">홈</a>
         <a href="#records">기록</a>
@@ -642,10 +647,22 @@
       </section>
 
       <section id="records" class="screen records-screen" aria-labelledby="records-title" tabindex="-1" hidden>
+        <div class="records-period-picker" role="group" aria-label="기록 기간 선택">
+          <div class="records-period-row" role="group" aria-label="연도 선택">
+            <button id="previous-record-year" type="button" aria-label="이전 연도">‹</button>
+            <span id="selected-record-year" aria-live="polite">2026</span>
+            <button id="next-record-year" type="button" aria-label="다음 연도">›</button>
+          </div>
+          <div class="records-period-row" role="group" aria-label="월 선택">
+            <button id="previous-record-month" type="button" aria-label="이전 달">‹</button>
+            <span id="selected-record-month" aria-live="polite">11월</span>
+            <button id="next-record-month" type="button" aria-label="다음 달">›</button>
+          </div>
+        </div>
         <section class="record-history recommendations" aria-label="저장된 아우터 기록">
           <div class="records-heading">
             <h1 id="records-title" tabindex="-1">내 옷 기록</h1>
-            <a class="primary-button" href="#add">기록 추가</a>
+            <a class="primary-button" href="#add">추가</a>
           </div>
           <div id="record-list" class="record-list" aria-live="polite"></div>
           <div id="record-empty" class="empty-state">
