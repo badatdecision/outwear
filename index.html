@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#fffaf0">
-    <title>설정 · 옷 고르기</title>
+    <title>위치 · 옷 고르기</title>
     <link rel="stylesheet" href="style.css">
     <!-- Local file preview snapshot of regions.json. Keep both datasets in sync. -->
     <script id="region-data" type="application/json">
@@ -609,20 +609,25 @@
       <a class="brand" href="#home">옷 고르기<span aria-hidden="true">.</span></a>
       <nav aria-label="주요 메뉴">
         <a href="#home">홈</a>
-        <a href="#add">기록 추가</a>
-        <a href="#settings" aria-current="page">설정</a>
+        <a href="#records">기록</a>
       </nav>
     </header>
     <main>
       <p id="save-notice" class="save-notice" role="status" hidden></p>
 
       <section id="home" class="screen" aria-label="오늘 날씨와 추천 아우터" tabindex="-1" hidden>
+        <div class="home-location">
+          <strong id="home-location-name">위치 정보</strong>
+          <a href="#settings">위치 정보 변경</a>
+        </div>
         <div class="weather-actions">
           <div class="weather-card">
-            <p id="weather-date" class="weather-date">오늘 날짜</p>
+            <div class="weather-copy">
+              <p id="weather-date" class="weather-date">오늘 날짜</p>
+              <div class="temperature">—<span>°C</span></div>
+              <p id="weather-caption" class="weather-caption" role="status">날씨를 불러오는 중이에요.</p>
+            </div>
             <div id="weather-art" class="weather-art" role="img" aria-label="화창한 날씨"></div>
-            <div class="temperature">—<span>°C</span></div>
-            <p id="weather-caption" class="weather-caption" role="status">날씨를 불러오는 중이에요.</p>
           </div>
           <button id="load-weather" class="secondary-button" type="button" hidden>날씨 다시 불러오기</button>
         </div>
@@ -631,19 +636,17 @@
           <div id="recommendation-list" class="record-list"></div>
           <p id="recommendation-message"></p>
         </section>
-        <div class="home-actions" aria-label="옷 선택과 기록">
-          <button id="choose-outfit" class="primary-button" type="button">옷 고르기</button>
-          <a class="secondary-button" href="#add">기록 추가</a>
-        </div>
-        <section class="record-history" aria-labelledby="record-history-title">
-          <div class="section-heading">
-            <h2 id="record-history-title">내 옷 기록</h2>
-          </div>
+      </section>
+
+      <section id="records" class="screen records-screen" aria-labelledby="records-title" tabindex="-1" hidden>
+        <section class="record-history recommendations" aria-label="저장된 아우터 기록">
+          <h1 id="records-title" tabindex="-1">내 옷 기록</h1>
           <div id="record-list" class="record-list" aria-live="polite"></div>
           <div id="record-empty" class="empty-state">
             <p>아직 기록이 없어요.</p>
           </div>
         </section>
+        <a class="primary-button" href="#add">기록 추가</a>
       </section>
 
       <section id="add" class="screen" aria-labelledby="add-title" hidden>
@@ -709,7 +712,7 @@
           <p class="privacy-note">기록은 이 기기의 브라우저에만 저장돼요.<br>브라우저 데이터를 지우면 기록도 사라질 수 있어요.</p>
           <p id="settings-error" class="form-error" role="alert" hidden></p>
           <button id="retry-regions" class="secondary-button" type="button" hidden>지역 목록 다시 불러오기</button>
-          <button id="save-settings" class="primary-button" type="submit" disabled>설정 저장</button>
+          <button id="save-settings" class="primary-button" type="submit" disabled>저장</button>
         </form>
         <a class="back-link" href="#home">홈 화면 둘러보기</a>
       </section>
@@ -717,4 +720,3 @@
     </main>
   </body>
 </html>
-
