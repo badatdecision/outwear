@@ -25,8 +25,8 @@ window.OutwearWeather = (() => {
     return Number(timestamp.slice(11, 13));
   }
 
-  async function requestWeather(settings, date, dateParameters, fetcher) {
-    const url = new URL("https://api.open-meteo.com/v1/forecast");
+  async function requestWeather(settings, date, dateParameters, fetcher, endpoint = "https://api.open-meteo.com/v1/forecast") {
+    const url = new URL(endpoint);
     url.search = new URLSearchParams({
       latitude: String(settings.lat), longitude: String(settings.lon),
       hourly: "apparent_temperature,temperature_2m,precipitation,snowfall,cloud_cover",
@@ -70,7 +70,14 @@ window.OutwearWeather = (() => {
   }
 
   function fetchForDate(settings, date, fetcher = window.fetch.bind(window)) {
-    return requestWeather(settings, date, { past_days: "1", forecast_days: "2" }, fetcher);
+    const today = localDate(new Date());
+    const daysAgo = Math.round((Date.parse(today + "T00:00:00Z") - Date.parse(date + "T00:00:00Z")) / 86400000);
+    if (daysAgo < 0) return Promise.reject(new Error("오늘 이후 날짜는 기록할 수 없어요."));
+    if (daysAgo <= 92) {
+      return requestWeather(settings, date, { past_days: String(daysAgo), forecast_days: "2" }, fetcher);
+    }
+    return requestWeather(settings, date, { start_date: date, end_date: date }, fetcher,
+      "https://archive-api.open-meteo.com/v1/archive");
   }
 
   async function getWeather(settings, now = new Date(), fetcher = window.fetch.bind(window)) {

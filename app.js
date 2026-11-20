@@ -78,7 +78,11 @@
     list.replaceChildren();
     document.getElementById("record-empty").hidden = records.length > 0;
     const ratings = { cold: "추웠음", ok: "적당", hot: "더웠음" };
-    for (const record of [...records].reverse()) {
+    const newestFirst = records.map((record, index) => ({ record, index }))
+      .sort((a, b) => String(b.record.date || "").localeCompare(String(a.record.date || ""))
+        || b.index - a.index)
+      .map(({ record }) => record);
+    for (const record of newestFirst) {
       const typeName = record.outerType || record.outer.split(" · ")[0];
       const card = appendRecommendation(list, {
         typeName,
@@ -379,10 +383,7 @@
     try {
       if (!settings) throw new Error("위치 화면에서 지역과 외출 시간을 먼저 저장해 주세요.");
       const today = weather.localDate(new Date());
-      const yesterday = weather.previousDate(today);
-      if (![today, yesterday].includes(selectedDate)) {
-        throw new Error("오늘 또는 어제 날짜를 선택해 주세요.");
-      }
+      if (!selectedDate || selectedDate > today) throw new Error("오늘 또는 그 이전 날짜를 선택해 주세요.");
       const result = await weather.fetchForDate(settings, selectedDate);
       if (recordDate.value !== selectedDate) return;
       recordWeather = result;
@@ -401,7 +402,7 @@
     const today = weather.localDate(new Date());
     recordDate.value = today;
     recordDate.max = today;
-    recordDate.min = weather.previousDate(today);
+    recordDate.min = "1940-01-01";
     updateRecordDateLabels();
     selectedOuterType = "";
     outerNickname.value = "";
@@ -545,8 +546,7 @@
     }
     settings = nextSettings;
     updateLocationName();
-    notice.textContent = "위치 정보를 저장했어요.";
-    notice.hidden = false;
+    showSaveNotice("위치 정보를 저장했어요.", 5000);
     window.location.hash = "home";
   }
 
