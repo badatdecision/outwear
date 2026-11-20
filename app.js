@@ -743,14 +743,6 @@
   end.addEventListener("input", validateTimes);
   form.addEventListener("submit", saveSettings);
   form.addEventListener("input", () => { notice.hidden = true; });
-  const accountStatus = document.getElementById("account-status");
-  document.getElementById("account-login").addEventListener("click", () => {
-    accountStatus.textContent = "계정 로그인 기능은 아직 연결되지 않았어요.";
-    accountStatus.hidden = false;
-  });
-  document.querySelector(".account-entry").addEventListener("input", () => {
-    accountStatus.hidden = true;
-  });
   retryButton.addEventListener("click", loadRegions);
   document.getElementById("load-weather").addEventListener("click", fetchWeather);
   document.getElementById("previous-record-year").addEventListener("click", () => changeRecordPeriod("year", -1));
@@ -776,4 +768,3 @@
   showScreen(false);
   loadRegions();
 })();
-
