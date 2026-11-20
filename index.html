@@ -614,43 +614,45 @@
       </nav>
     </header>
     <main>
-      <p class="preview-note">설정을 저장할 수 있어요. 날씨 조회와 옷 기록은 준비 중이에요.</p>
       <p id="save-notice" class="save-notice" role="status" hidden></p>
 
-      <section id="home" class="screen" aria-labelledby="home-title" hidden>
-        <p class="eyebrow">내 경험으로 고르는 옷</p>
-        <h1 id="home-title" tabindex="-1">오늘 뭐 입지?</h1>
-        <p class="intro">비슷한 날 입었던 옷과 느낌을 보고<br>오늘의 아우터를 골라요.</p>
-        <div class="weather-card">
-          <p id="settings-summary">오늘 외출 시간대</p>
-          <div class="temperature">—<span>°C</span></div>
-          <p id="weather-caption" class="weather-caption" role="status">날씨를 불러오는 중이에요.</p>
-          <a href="#settings">지역과 외출 시간 설정</a>
+      <section id="home" class="screen" aria-label="오늘 날씨와 추천 아우터" tabindex="-1" hidden>
+        <div class="weather-actions">
+          <div class="weather-card">
+            <p id="weather-date" class="weather-date">오늘 날짜</p>
+            <div id="weather-art" class="weather-art" role="img" aria-label="화창한 날씨"></div>
+            <div class="temperature">—<span>°C</span></div>
+            <p id="weather-caption" class="weather-caption" role="status">날씨를 불러오는 중이에요.</p>
+          </div>
+          <button id="load-weather" class="secondary-button" type="button" hidden>날씨 다시 불러오기</button>
         </div>
-        <button id="load-weather" class="secondary-button" type="button" hidden>날씨 다시 불러오기</button>
-        <button id="choose-outfit" class="primary-button" type="button">옷 고르기</button>
-        <section id="recommendations" class="recommendations" aria-live="polite" hidden>
-          <h2 id="recommendation-title">비슷한 날의 내 기록 (±3°C)</h2>
-          <p id="recommendation-message"></p>
+        <section id="recommendations" class="recommendations" aria-live="polite">
+          <h2 id="recommendation-title">오늘의 추천 아우터</h2>
           <div id="recommendation-list" class="record-list"></div>
-          <a id="recommendation-add" class="secondary-button" href="#add" hidden>오늘 입은 옷 기록하기</a>
+          <p id="recommendation-message"></p>
         </section>
-        <div class="section-heading">
-          <h2>내 옷 기록</h2>
-          <a href="#add">기록 추가</a>
+        <div class="home-actions" aria-label="옷 선택과 기록">
+          <button id="choose-outfit" class="primary-button" type="button">옷 고르기</button>
+          <a class="secondary-button" href="#add">기록 추가</a>
         </div>
-        <div id="record-list" class="record-list" aria-live="polite"></div>
-        <div id="record-empty" class="empty-state">
-          <p>오늘의 경험이<br>다음 선택을 도와줄 거예요.</p>
-          <a class="secondary-button" href="#add">오늘 입은 옷 기록하기</a>
-        </div>
+        <section class="record-history" aria-labelledby="record-history-title">
+          <div class="section-heading">
+            <h2 id="record-history-title">내 옷 기록</h2>
+          </div>
+          <div id="record-list" class="record-list" aria-live="polite"></div>
+          <div id="record-empty" class="empty-state">
+            <p>아직 기록이 없어요.</p>
+          </div>
+        </section>
       </section>
 
       <section id="add" class="screen" aria-labelledby="add-title" hidden>
         <p class="eyebrow">내 옷의 기록</p>
         <h1 id="add-title" tabindex="-1">오늘 입은 옷</h1>
-        <p class="intro">어떤 옷을 입었고, 어떻게 느꼈나요?</p>
+        <p id="record-date-intro" class="intro">그날 어떤 옷을 입었고, 어떻게 느꼈나요?</p>
         <form id="record-form" class="form-card">
+          <label for="record-date">기록 날짜</label>
+          <input id="record-date" type="date" required>
           <p id="record-weather" class="field-note" role="status">날씨를 불러오는 중이에요.</p>
           <p id="weather-error" class="form-error" role="alert" hidden></p>
           <div id="manual-temperature" hidden>
@@ -659,13 +661,18 @@
             <label for="manual-temperature-value">기온 (°C)</label>
             <input id="manual-temperature-value" type="number" min="-50" max="60" step="0.1" inputmode="decimal">
           </div>
-          <label for="outer">아우터</label>
-          <div id="outer-options" class="outer-options" aria-label="이전에 기록한 아우터"></div>
-          <input id="outer" type="text" placeholder="예: 울 코트" autocomplete="off">
+          <fieldset>
+            <legend>아우터 종류</legend>
+            <div id="outer-types" class="outer-type-grid" role="group" aria-label="아우터 종류 선택"></div>
+          </fieldset>
+          <label for="outer-nickname">별명 <span class="optional">선택</span></label>
+          <input id="outer-nickname" type="text" placeholder="예: 출근용 네이비" autocomplete="off">
+          <p class="field-note">같은 종류의 옷은 별명으로 구분할 수 있어요.</p>
+          <div id="outer-options" class="outer-options" aria-label="이전에 기록한 아우터 선택"></div>
           <label for="inner">이너 메모 <span class="optional">선택 · 20자 이내</span></label>
           <input id="inner" type="text" maxlength="20" placeholder="예: 니트, 히트텍" autocomplete="off">
           <fieldset>
-            <legend>오늘 어땠나요?</legend>
+            <legend id="record-rating-legend">그날 어땠나요?</legend>
             <div class="ratings">
               <label class="rating cold"><input type="radio" name="rating" value="cold"><span>추웠음</span></label>
               <label class="rating comfortable"><input type="radio" name="rating" value="ok"><span>적당</span></label>
@@ -710,3 +717,4 @@
     </main>
   </body>
 </html>
+
