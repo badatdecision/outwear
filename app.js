@@ -302,6 +302,11 @@
     const art = document.getElementById("weather-art");
     const svgNamespace = "http://www.w3.org/2000/svg";
     const cloud = "M25 62h56a16 16 0 0 0 0-32 23 23 0 0 0-44-6 17 17 0 0 0-12 38z";
+    const make = (tag, attrs = {}) => {
+      const element = document.createElementNS(svgNamespace, tag);
+      for (const [name, value] of Object.entries(attrs)) element.setAttribute(name, String(value));
+      return element;
+    };
     const scenes = {
       sunny: [
         { tag: "path", attrs: { d: "M34 7v8M34 55v8M10 31h8M50 31h8M17 14l6 6M45 44l6 6M51 14l-6 6M23 44l-6 6", stroke: "#ffdc54", "stroke-width": 4, "stroke-linecap": "round" } },
@@ -330,10 +335,33 @@
     const svg = document.createElementNS(svgNamespace, "svg");
     svg.setAttribute("viewBox", "0 0 120 90");
     svg.setAttribute("aria-hidden", "true");
+    const defs = make("defs");
+    const gradients = [
+      ["sun-fill", [["0%", "#fff6b0"], ["62%", "#ffd84d"], ["100%", "#ffad36"]]],
+      ["cloud-fill", [["0%", "#ffffff"], ["100%", "#d9f1ff"]]],
+      ["cloud-shadow", [["0%", "#c9eaff"], ["100%", "#8fcaf0"]]],
+      ["rain-fill", [["0%", "#e8f7ff"], ["100%", "#b8d9ef"]]],
+    ];
+    for (const [id, stops] of gradients) {
+      const gradient = make("linearGradient", { id, x1: "0", y1: "0", x2: "0.2", y2: "1" });
+      for (const [offset, color] of stops) gradient.append(make("stop", { offset, "stop-color": color }));
+      defs.append(gradient);
+    }
+    const glow = make("radialGradient", { id: "sun-glow" });
+    glow.append(make("stop", { offset: "0%", "stop-color": "#fff7c2", "stop-opacity": "0.8" }));
+    glow.append(make("stop", { offset: "100%", "stop-color": "#fff7c2", "stop-opacity": "0" }));
+    defs.append(glow);
+    svg.append(defs);
+    if (condition === "sunny" || condition === "partly-cloudy") {
+      svg.append(make("circle", { cx: "43", cy: "38", r: "36", fill: "url(#sun-glow)" }));
+    }
     for (const shape of scenes[condition] || scenes.sunny) {
-      const element = document.createElementNS(svgNamespace, shape.tag);
-      for (const [name, value] of Object.entries(shape.attrs)) element.setAttribute(name, String(value));
-      svg.append(element);
+      const attrs = { ...shape.attrs };
+      if (attrs.fill === "#ffdc54") attrs.fill = "url(#sun-fill)";
+      if (attrs.fill === "#fff") attrs.fill = "url(#cloud-fill)";
+      if (attrs.fill === "#c6e7f8" || attrs.fill === "#bcd8ea") attrs.fill = "url(#cloud-shadow)";
+      if (attrs.fill === "#d6e8f3") attrs.fill = "url(#rain-fill)";
+      svg.append(make(shape.tag, attrs));
     }
     art.replaceChildren(svg);
     art.setAttribute("aria-label", labels[condition] || labels.sunny);
@@ -715,6 +743,14 @@
   end.addEventListener("input", validateTimes);
   form.addEventListener("submit", saveSettings);
   form.addEventListener("input", () => { notice.hidden = true; });
+  const accountStatus = document.getElementById("account-status");
+  document.getElementById("account-login").addEventListener("click", () => {
+    accountStatus.textContent = "계정 로그인 기능은 아직 연결되지 않았어요.";
+    accountStatus.hidden = false;
+  });
+  document.querySelector(".account-entry").addEventListener("input", () => {
+    accountStatus.hidden = true;
+  });
   retryButton.addEventListener("click", loadRegions);
   document.getElementById("load-weather").addEventListener("click", fetchWeather);
   document.getElementById("previous-record-year").addEventListener("click", () => changeRecordPeriod("year", -1));
