@@ -3,6 +3,8 @@
 window.OutwearStorage = (() => {
   const key = "outwear";
   const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+  const outerTypes = ["패딩", "경량패딩", "무스탕", "후리스", "가죽재킷", "블레이저", "가디건", "바람막이", "셔츠", "기타"];
+  const previousOuterTypes = ["코트", "트렌치코트", "재킷"];
 
   function read() {
     const raw = window.localStorage.getItem(key);
@@ -42,24 +44,53 @@ window.OutwearStorage = (() => {
     return {
       ...data,
       settings: validSettings(data.settings) ? data.settings : null,
-      outers: Array.isArray(data.outers) ? data.outers.filter((name) => typeof name === "string") : [],
+      outers: normalizeOuters(data.outers),
       records: Array.isArray(data.records) ? data.records : [],
     };
   }
 
+  function normalizeOuters(outers) {
+    if (!Array.isArray(outers)) return [];
+    return outers.map((item) => {
+      if (typeof item === "string") return { type: "기타", nickname: item };
+      if (item && outerTypes.includes(item.type) && typeof item.nickname === "string") {
+        return { type: item.type, nickname: item.nickname };
+      }
+      if (item && previousOuterTypes.includes(item.type) && typeof item.nickname === "string") {
+        return { type: "기타", nickname: item.nickname ? item.type + " · " + item.nickname : item.type };
+      }
+      return null;
+    }).filter(Boolean);
+  }
+
   function saveRecord(record) {
-    if (!record || !record.outer || !["cold", "ok", "hot"].includes(record.rating)
+    if (!record || !record.outer || !outerTypes.includes(record.outerType)
+      || typeof record.outerNickname !== "string" || !["cold", "ok", "hot"].includes(record.rating)
       || !Number.isFinite(record.feelsLike) || !Number.isFinite(record.temp)
       || !["none", "rain", "snow"].includes(record.precip)) {
       throw new Error("기록 내용을 확인해 주세요.");
     }
     const data = read();
-    data.outers = Array.isArray(data.outers) ? data.outers : [];
+    data.outers = normalizeOuters(data.outers);
     data.records = Array.isArray(data.records) ? data.records : [];
-    if (!data.outers.includes(record.outer)) data.outers.push(record.outer);
+    if (!data.outers.some((item) => item.type === record.outerType && item.nickname === record.outerNickname)) {
+      data.outers.push({ type: record.outerType, nickname: record.outerNickname });
+    }
     data.records.push(record);
     window.localStorage.setItem(key, JSON.stringify(data));
   }
 
-  return Object.freeze({ key, loadSettings, loadData, saveSettings, saveRecord, validSettings });
+  function deleteRecord(id) {
+    if (typeof id !== "string" || !id) throw new Error("삭제할 기록을 찾을 수 없어요.");
+    const data = read();
+    data.records = Array.isArray(data.records) ? data.records : [];
+    const records = data.records.filter((record) => record.id !== id);
+    if (records.length === data.records.length) return false;
+    data.records = records;
+    window.localStorage.setItem(key, JSON.stringify(data));
+    return true;
+  }
+
+  return Object.freeze({ key, loadSettings, loadData, saveSettings, saveRecord, deleteRecord, validSettings });
 })();
+
