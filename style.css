@@ -288,9 +288,7 @@ h1, h2, legend { color: #26364a; }
   gap: 18px;
 }
 #home > .weather-actions,
-#home > .recommendations,
-#home > .home-actions,
-#home > .record-history {
+#home > .recommendations {
   width: min(100%, 480px);
   margin-inline: auto;
 }
@@ -305,10 +303,6 @@ h1, h2, legend { color: #26364a; }
   max-width: none;
   margin: 0 auto;
 }
-.home-actions { display: grid; gap: 14px; justify-items: center; }
-.home-actions > .primary-button,
-.home-actions > .secondary-button { width: 100%; max-width: none; margin: 0 auto; }
-
 .weather-card {
   width: 100%;
   padding: 24px;
@@ -433,11 +427,17 @@ input:focus, select:focus { border-color: #3989bd; }
   text-decoration: none;
 }
 #home { gap: 18px; }
+#home > .home-location { width: min(100%, 480px); margin-inline: auto; }
+.home-location { display: grid; gap: 2px; color: #25435c; }
+.home-location strong { font-size: 18px; line-height: 1.35; }
+.home-location a { width: fit-content; color: #52748e; font-size: 12px; text-decoration: underline; text-underline-offset: 2px; }
 #home > .weather-actions,
-#home > .recommendations,
-#home > .home-actions,
-#home > .record-history { width: min(100%, 480px); }
+#home > .recommendations { width: min(100%, 480px); }
 #home .weather-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 128px;
+  align-items: center;
+  gap: 12px;
   padding: 12px 18px;
   overflow: hidden;
   border: 0;
@@ -446,11 +446,11 @@ input:focus, select:focus { border-color: #3989bd; }
   background: linear-gradient(145deg, #54a9eb, #79c8f2);
   box-shadow: 0 12px 28px rgba(58, 126, 180, .18);
 }
-#home .weather-card a { color: #fff; }
-#home .weather-date { margin-top: 0; font-size: 12px; }
-#home .weather-art { height: 48px; margin: 0; }
-#home .weather-art svg { width: 74px; height: 52px; }
-#home .temperature { margin: 0; font-size: 44px; line-height: 1; letter-spacing: -2px; }
+#home .weather-copy { min-width: 0; }
+#home .weather-date { margin: 0 0 2px; font-size: 12px; }
+#home .weather-art { width: 128px; height: 104px; margin: 0; }
+#home .weather-art svg { width: 124px; height: 100px; }
+#home .temperature { margin: 0; font-size: 48px; line-height: 1; letter-spacing: -2px; }
 #home .temperature span { margin-left: 5px; font-size: 18px; letter-spacing: 0; }
 #home .weather-caption { margin: 4px 0 0; font-size: 12px; line-height: 1.35; }
 #home .weather-date,
@@ -523,13 +523,38 @@ input:focus, select:focus { border-color: #3989bd; }
 .recommendation-rating.rating-ok { color: #176347; background: #dff4e9; }
 .recommendation-rating.rating-cold { color: #28618b; background: #e1f0ff; }
 .recommendation-rating.rating-hot { color: #99512d; background: #fff0e4; }
-#home .home-actions { gap: 10px; }
-#home .home-actions .primary-button { background: #318bd0; }
-#home .home-actions .primary-button:hover:not(:disabled) { background: #2479ba; }
-#home .home-actions .secondary-button {
-  border: 1px solid #d5e6f5;
-  color: #28618b;
-  background: #fff;
+.records-screen { display: grid; gap: 16px; }
+#records > .record-history,
+#records > .primary-button {
+  width: min(100%, 480px);
+  margin-inline: auto;
 }
-#home .record-history { padding-top: 4px; }
+#records .record-history {
+  display: grid;
+  gap: 0;
+  padding: 14px 18px;
+  border: 1px solid #e2edf6;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(48, 92, 125, .08);
+}
+#records .record-history h1 {
+  margin: 0;
+  color: #25435c;
+  font-size: 18px;
+  line-height: 1.4;
+}
+#records #record-list { gap: 6px; margin-top: 0; }
+.record-history-option { cursor: pointer; touch-action: pan-y; user-select: none; }
+.record-history-option:focus-visible { outline: 3px solid #2879a9; outline-offset: 3px; }
+#records #record-empty { margin: 0; padding: 8px 0 0; border: 0; background: transparent; box-shadow: none; }
+#records #record-empty p { margin: 0; color: #708292; font-size: 13px; line-height: 1.45; }
+#records #record-list:not(:empty) + #record-empty { display: none; }
+#records > .primary-button { margin-top: 0; }
 
+@media (max-width: 380px) {
+  #home .weather-card { grid-template-columns: minmax(0, 1fr) 92px; gap: 8px; padding-inline: 14px; }
+  #home .weather-art { width: 92px; height: 82px; }
+  #home .weather-art svg { width: 92px; height: 78px; }
+  #home .temperature { font-size: 42px; }
+}
